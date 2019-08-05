@@ -21,8 +21,14 @@ namespace RFIDTagReader
         private DataReader _dataReader;
         private ObservableCollection<DeviceInformation> _deviceList;
         private CancellationTokenSource _readCancellationTokenSource;
+        private RFIDEventArgs argument;
 
         public RFIDReader()
+        {
+            
+        }
+
+        public void Start()
         {
             this.SetupPort();
         }
@@ -38,42 +44,72 @@ namespace RFIDTagReader
                 {
                     DeviceInformation entry = (DeviceInformation)dis[0];
                     this._serialPort = await SerialDevice.FromIdAsync(entry.Id);
-                    this._serialPort.ReadTimeout = TimeSpan.FromMilliseconds(1000);
-                    this._serialPort.BaudRate = 9600;
-                    this._serialPort.DataBits = 8;
-                    this._serialPort.StopBits = SerialStopBitCount.One;
-                    this._serialPort.Parity = SerialParity.None;
-                    this._serialPort.Handshake = SerialHandshake.None;
+                    //this._serialPort.ReadTimeout = TimeSpan.FromMilliseconds(1000);
+                    //this._serialPort.BaudRate = 9600;
+                    //this._serialPort.DataBits = 8;
+                    //this._serialPort.StopBits = SerialStopBitCount.One;
+                    //this._serialPort.Parity = SerialParity.None;
+                    //this._serialPort.Handshake = SerialHandshake.None;
                     this._readCancellationTokenSource = new CancellationTokenSource();
 
-                    this.Listen();
+                    this.Listen(this._serialPort);
+                } else
+                {
+                    // if RFID Reader is not connected
+                    this.argument = new RFIDEventArgs("RFID Reader Not Found");
+
+                    if (this.OnDataTag == null)
+                    {
+                        return;
+                    }
+                    this.OnDataTag(this, this.argument);
                 }
             } catch (Exception ex)
             {
-                Debug.WriteLine(ex.ToString());
+                this.argument = new RFIDEventArgs(ex.ToString());
+
+                if (OnDataTag == null)
+                {
+                    return;
+                }
+                this.OnDataTag(this, argument);
             }
         }
 
         /// <summary>
         /// start listening to RFID tag data found
         /// </summary>
-        private async void Listen()
+        private async void Listen(SerialDevice serialPort)
         {
-            if (this._serialPort == null)
+            if (serialPort == null)
             {
+                this.argument = new RFIDEventArgs("serial port null");
+
+                if (this.OnDataTag == null)
+                {
+                    return;
+                }
+                this.OnDataTag(this, this.argument);
+
                 return;
             }
 
             try
             {
-                this._dataReader = new DataReader(this._serialPort.InputStream);
+                this._dataReader = new DataReader(serialPort.InputStream);
                 while (true)
                 {
-                    await this.ReadAsync(this._readCancellationTokenSource.Token);
+                    await this.ReadAsync(this._readCancellationTokenSource.Token, this._dataReader);
                 }
             } catch (Exception ex)
             {
-                Debug.WriteLine(ex.ToString());
+                this.argument = new RFIDEventArgs(ex.ToString());
+
+                if (this.OnDataTag == null)
+                {
+                    return;
+                }
+                this.OnDataTag(this, this.argument);
             } finally
             {
                 if (this._dataReader != null)
@@ -89,25 +125,25 @@ namespace RFIDTagReader
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        private async Task ReadAsync(CancellationToken cancellationToken)
+        private async Task ReadAsync(CancellationToken cancellationToken, DataReader dataReader)
         {
             Task<UInt32> loadAsyncTask;
             uint ReadBufferLength = 1024;
             cancellationToken.ThrowIfCancellationRequested();
 
             // create task and wait for the data on the input stream
-            loadAsyncTask = this._dataReader.LoadAsync(ReadBufferLength).AsTask(cancellationToken);
+            loadAsyncTask = dataReader.LoadAsync(ReadBufferLength).AsTask(cancellationToken);
 
             UInt32 bytesRead = await loadAsyncTask;
             if (bytesRead > 0)
             {
-                RFIDEventArgs argument = new RFIDEventArgs(this._dataReader.ReadString(bytesRead));
+                this.argument = new RFIDEventArgs(dataReader.ReadString(bytesRead));
 
-                if (OnDataTag == null)
+                if (this.OnDataTag == null)
                 {
                     return;
                 }
-                OnDataTag(this, argument);
+                this.OnDataTag(this, this.argument);
             }
         }
     }

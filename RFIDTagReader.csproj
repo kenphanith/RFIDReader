@@ -120,7 +120,8 @@
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
+    <Compile Include="RFIDEventArgs.cs" />
+    <Compile Include="RFIDReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Properties\RFIDTagReader.rd.xml" />
   </ItemGroup>
