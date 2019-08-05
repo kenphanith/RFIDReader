@@ -44,12 +44,12 @@ namespace RFIDTagReader
                 {
                     DeviceInformation entry = (DeviceInformation)dis[0];
                     this._serialPort = await SerialDevice.FromIdAsync(entry.Id);
-                    //this._serialPort.ReadTimeout = TimeSpan.FromMilliseconds(1000);
-                    //this._serialPort.BaudRate = 9600;
-                    //this._serialPort.DataBits = 8;
-                    //this._serialPort.StopBits = SerialStopBitCount.One;
-                    //this._serialPort.Parity = SerialParity.None;
-                    //this._serialPort.Handshake = SerialHandshake.None;
+                    this._serialPort.ReadTimeout = TimeSpan.FromMilliseconds((1000));
+                    this._serialPort.BaudRate = 9600;
+                    this._serialPort.DataBits = 8;
+                    this._serialPort.StopBits = SerialStopBitCount.One;
+                    this._serialPort.Parity = SerialParity.None;
+                    this._serialPort.Handshake = SerialHandshake.None;
                     this._readCancellationTokenSource = new CancellationTokenSource();
 
                     this.Listen(this._serialPort);
@@ -134,6 +134,7 @@ namespace RFIDTagReader
             // create task and wait for the data on the input stream
             loadAsyncTask = dataReader.LoadAsync(ReadBufferLength).AsTask(cancellationToken);
 
+            // If RFID device cannot read the tag, the below code will never be executed
             UInt32 bytesRead = await loadAsyncTask;
             if (bytesRead > 0)
             {
