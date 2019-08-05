@@ -5,7 +5,7 @@
 + sample code
 ```
 private RFIDReader _rfidReader = new RFIDReader();
-_rfidReader.OnDataTag += GetTagData;
+_rfidReader.OnDataTag += new RFIDDataHandler(this.GetTagData);
 _rfidReader.Start();
 
 private void GetTagData(object sender, RFIDEventArgs e)
