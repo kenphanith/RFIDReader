@@ -6,7 +6,7 @@
 ```
 <DeviceCapability Name="serialcommunication">
     <Device Id="any">
-    <Function Type="name:serialPort" />
+        <Function Type="name:serialPort" />
     </Device>
 </DeviceCapability>
 ```
