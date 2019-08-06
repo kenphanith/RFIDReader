@@ -28,9 +28,41 @@ namespace RFIDTagReader
             
         }
 
+        /// <summary>
+        /// Start the process
+        /// </summary>
         public void Start()
         {
             this.SetupPort();
+        }
+
+        /// <summary>
+        /// Stop the process
+        /// </summary>
+        public void Stop()
+        {
+            try
+            {
+                // cancel read task
+                if (_readCancellationTokenSource != null)
+                {
+                    if (!_readCancellationTokenSource.IsCancellationRequested)
+                    {
+                        _readCancellationTokenSource.Cancel();
+                    }
+                }
+
+                // close device
+                if (_serialPort != null)
+                {
+                    _serialPort.Dispose();
+                }
+                _serialPort = null;
+            }
+            catch
+            {
+                return;
+            }
         }
 
         private async void SetupPort()
@@ -56,23 +88,11 @@ namespace RFIDTagReader
                 } else
                 {
                     // if RFID Reader is not connected
-                    this.argument = new RFIDEventArgs("RFID Reader Not Found");
-
-                    if (this.OnDataTag == null)
-                    {
-                        return;
-                    }
-                    this.OnDataTag(this, this.argument);
+                    throw new Exception("RFID Reader Not Found");
                 }
-            } catch (Exception ex)
+            } catch
             {
-                this.argument = new RFIDEventArgs(ex.ToString());
-
-                if (OnDataTag == null)
-                {
-                    return;
-                }
-                this.OnDataTag(this, argument);
+                return;
             }
         }
 
@@ -81,35 +101,22 @@ namespace RFIDTagReader
         /// </summary>
         private async void Listen(SerialDevice serialPort)
         {
-            if (serialPort == null)
-            {
-                this.argument = new RFIDEventArgs("serial port null");
-
-                if (this.OnDataTag == null)
-                {
-                    return;
-                }
-                this.OnDataTag(this, this.argument);
-
-                return;
-            }
 
             try
             {
+                if (serialPort == null)
+                {
+                    throw new Exception("RFID Device not found");
+                }
+
                 this._dataReader = new DataReader(serialPort.InputStream);
                 while (true)
                 {
                     await this.ReadAsync(this._readCancellationTokenSource.Token, this._dataReader);
                 }
-            } catch (Exception ex)
+            } catch
             {
-                this.argument = new RFIDEventArgs(ex.ToString());
-
-                if (this.OnDataTag == null)
-                {
-                    return;
-                }
-                this.OnDataTag(this, this.argument);
+                return;
             } finally
             {
                 if (this._dataReader != null)
@@ -138,14 +145,23 @@ namespace RFIDTagReader
             UInt32 bytesRead = await loadAsyncTask;
             if (bytesRead > 0)
             {
-                this.argument = new RFIDEventArgs(dataReader.ReadString(bytesRead));
-
-                if (this.OnDataTag == null)
-                {
-                    return;
-                }
-                this.OnDataTag(this, this.argument);
+                this.UpdateStatus(dataReader.ReadString(bytesRead));
             }
+        }
+
+        /// <summary>
+        /// Emit the RFID data to the event
+        /// </summary>
+        /// <param name="message"></param>
+        private void UpdateStatus(string message)
+        {
+            this.argument = new RFIDEventArgs(message);
+
+            if (this.OnDataTag == null)
+            {
+                return;
+            }
+            this.OnDataTag(this, this.argument);
         }
     }
 }
